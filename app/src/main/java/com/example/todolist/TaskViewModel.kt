@@ -1,26 +1,39 @@
 package com.example.todolist
 
-import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
+class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
-//los dos puntos en Kotlin equivalen a extends en Java
-class TaskViewModel : ViewModel() { // clase de Android que mantiene los datos vivos aunque la pantalla rote o se reconstruya
+    private val repository: TaskRepository
 
-    private val _tasks = MutableStateFlow<List<Task>>(emptyList())
-    val tasks: StateFlow<List<Task>> = _tasks
+    val tasks: StateFlow<List<Task>>
 
-    private var nextId = 0
+    init {
+        val dao = TaskDatabase.getDatabase(application).taskDao()
+        repository = TaskRepository(dao)
+        tasks = repository.allTasks.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+    }
 
     fun addTask(title: String) {
         if (title.isBlank()) return
-        _tasks.value = _tasks.value + Task(id = nextId++, title = title)
+        viewModelScope.launch {
+            repository.insertTask(Task(title = title))
+        }
     }
 
-    fun toggleTask(id: Int) {
-        _tasks.value = _tasks.value.map { task ->
-            if (task.id == id) task.copy(isDone = !task.isDone) else task
+    fun toggleTask(task: Task) {
+        viewModelScope.launch {
+            repository.updateTask(task.copy(isDone = !task.isDone))
         }
     }
 }

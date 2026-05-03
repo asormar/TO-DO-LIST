@@ -71,7 +71,7 @@ fun TaskScreen(taskViewModel: TaskViewModel = viewModel()) {
                     ) {
                         Checkbox(
                             checked = task.isDone,
-                            onCheckedChange = { taskViewModel.toggleTask(task.id) }
+                            onCheckedChange = { taskViewModel.toggleTask(task) }
                         )
                         Text(
                             text = task.title,
